@@ -3,7 +3,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.xmu.footprint.mapper.FootprintMapper">
-    <!--根据条件：商品名/用户名，查找足迹-->
+    <!--根据条件：商品id/用户id，查找足迹-->
     <resultMap id="footprintItemResultMap" type="com.xmu.footprint.domain.FootprintItem">
         <id property="id" column="id"/>
         <result property="gmtCreate" column="gmt_create"/>
@@ -18,14 +18,15 @@
         oomall_footprint_item.user_id,
         oomall_footprint_item.goods_id
         from oomall_footprint_item,oomall_goods,oomall_user
-        where
-        <if test="goodsName!=null and goodsName!=''">
-            (oomall_footprint_item.goods_id=(select oomall_goods.id from oomall_goods where oomall_goods.name=#{goodsName})) and
-        </if>
-        <if test="userName!=null and userName!=''">
-            (oomall_footprint_item.user_id=(select oomall_user.id from oomall_user where oomall_user.name=#{userName})) and
-        </if>
-        true
+        <where>
+            <if test="userId!=null and userId!=''">
+                (oomall_footprint_item.user_id=#{userId}) and
+            </if>
+            <if test="goodsId!=null and goodsId!=''">
+                (oomall_footprint_item.goods_id=#{goodsId}) and
+            </if>
+            true
+        </where>
         order by oomall_footprint_item.birth_time desc
     </select>
 
@@ -41,7 +42,23 @@
         order by birth_time desc
     </select>
 
-    <!--根据id查找足迹-->
+<!--    &lt;!&ndash;根据id查找足迹&ndash;&gt;-->
+<!--    <select id="getFootprintItemPoById" parameterType="integer" resultMap="footprintItemPoResultMap">-->
+<!--        select id,-->
+<!--        gmt_create,-->
+<!--        birth_time,-->
+<!--        user_id,-->
+<!--        goods_id-->
+<!--        from oomall_footprint_item-->
+<!--        where id=#{id}-->
+<!--    </select>-->
+
+<!--    &lt;!&ndash;用户删除足迹&ndash;&gt;-->
+<!--    <delete id="deleteFootprintById" parameterType="integer">-->
+<!--        delete from oomall_footprint_item where id=#{id}-->
+<!--    </delete>-->
+
+    <!--根据用户id和商品id查找足迹-->
     <resultMap id="footprintItemPoResultMap" type="com.xmu.footprint.domain.FootprintItemPo">
         <id property="id" column="id"/>
         <result property="gmtCreate" column="gmt_create"/>
@@ -49,22 +66,6 @@
         <result property="userId" column="user_id"/>
         <result property="goodsId" column="goods_id"/>
     </resultMap>
-    <select id="getFootprintItemPoById" parameterType="integer" resultMap="footprintItemPoResultMap">
-        select id,
-        gmt_create,
-        birth_time,
-        user_id,
-        goods_id
-        from oomall_footprint_item
-        where id=#{id}
-    </select>
-
-    <!--用户删除足迹-->
-    <delete id="deleteFootprintById" parameterType="integer">
-        delete from oomall_footprint_item where id=#{id}
-    </delete>
-
-    <!--根据用户id和商品id查找足迹-->
     <select id="findFootprintItem" parameterType="integer" resultMap="footprintItemPoResultMap">
         select id,
         gmt_create,

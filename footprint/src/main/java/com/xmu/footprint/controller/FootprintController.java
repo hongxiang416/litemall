@@ -4,19 +4,20 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.xmu.footprint.domain.FootprintItem;
 import com.xmu.footprint.domain.FootprintItemPo;
-import com.xmu.footprint.feign.GoodsApi;
-import com.xmu.footprint.mapper.FootprintMapper;
+import com.xmu.footprint.domain.Log;
+import com.xmu.footprint.feign.GoodsServiceApi;
+import com.xmu.footprint.feign.LogServiceApi;
 import com.xmu.footprint.service.FootprintService;
 import com.xmu.footprint.util.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/footprintService")
+//@RequestMapping("/")
 /**
  * @author
  */
@@ -25,10 +26,10 @@ public class FootprintController {
     private FootprintService footprintService;
 
     @Autowired
-    GoodsApi goodsApi;
+    GoodsServiceApi goodsServiceApi;
 
-    @Resource
-    FootprintMapper footprintMapper;
+    @Autowired
+    LogServiceApi logServiceApi;
 
     List<FootprintItem> footprintItemLists;
     FootprintItem footprintItem;
@@ -41,21 +42,54 @@ public class FootprintController {
      * @return List<FootprintItem>，即获取的足迹列表
      */
     @GetMapping("/admin/footprints")
-    public Object listFootprintByCondition(String userName, String goodsName,
-                                                        @RequestParam(defaultValue = "1") Integer page,
-                                                        @RequestParam(defaultValue = "10") Integer limit) {
-        PageHelper.startPage(page,limit);
-        List<FootprintItem> footprintItemList=footprintService.listFootprintByCondition(userName,goodsName);
-        PageInfo<FootprintItem> footprintItemPageInfo=new PageInfo<>(footprintItemList);
-        List<FootprintItem> pageList=footprintItemPageInfo.getList();
-
-        footprintItemLists=new ArrayList<>();
-        for(int i=0;i<pageList.size();i++) {
-            footprintItem=pageList.get(i);
-            footprintItem.setGoodsPo(goodsApi.userGetGoodsById(footprintItem.getGoodsId()));
-            footprintItemLists.add(footprintItem);
+    public Object listFootprintByCondition(Integer userId, Integer goodsId,
+                                           @RequestParam(defaultValue = "1") Integer page, @RequestParam(defaultValue = "10") Integer limit) {
+        Object retObj;
+        Log log = new Log();
+        log.setType(0);
+        log.setActions("获取足迹列表");
+        boolean legal;
+        if(page<=0 || limit<=0) {
+            legal=false;
+        } else {
+            if(userId != null && goodsId != null) {
+                legal= (userId>0 && goodsId>0);
+            } else if(userId != null && goodsId == null) {
+                legal= (userId>0);
+            } else if (userId == null && goodsId != null) {
+                legal= (goodsId>0);
+            } else if(userId==null && goodsId==null){
+                legal= true;
+            } else {
+                legal=true;
+            }
         }
-        Object retObj=ResponseUtil.ok(footprintItemLists);
+        if(legal) {
+            PageHelper.startPage(page,limit);
+            List<FootprintItem> footprintItemList=footprintService.listFootprintByCondition(userId,goodsId);
+            PageInfo<FootprintItem> footprintItemPageInfo=new PageInfo<>(footprintItemList);
+            List<FootprintItem> pageList=footprintItemPageInfo.getList();
+
+            footprintItemLists=new ArrayList<>();
+            for(int i=0;i<pageList.size();i++) {
+                footprintItem=pageList.get(i);
+                footprintItem.setGoodsPo(goodsServiceApi.getGoodsByIdIn(footprintItem.getGoodsId()));
+                footprintItemLists.add(footprintItem);
+            }
+
+            if(footprintItemLists.size()>0) {
+                retObj=ResponseUtil.ok(footprintItemLists);
+                log.setStatusCode(1);
+            }
+            else {
+                retObj=ResponseUtil.nofootprint();
+                log.setStatusCode(1);
+            }
+        } else {
+            retObj=ResponseUtil.badValue();
+            log.setStatusCode(0);
+        }
+        logServiceApi.addLog(log);
         return retObj;
     }
 
@@ -65,40 +99,44 @@ public class FootprintController {
      * @param page 分页页数
      * @param limit 分页大小
      * @return List<FootprintItem>，即用户的足迹列表
+     * HttpServletRequest request
      */
     @GetMapping("/footprints")
-    public Object listFootprintByUserId(Integer userId,
-                                                     @RequestParam(defaultValue = "1") Integer page,
-                                                     @RequestParam(defaultValue = "0") Integer limit) {
-        PageHelper.startPage(page,limit);
-        List<FootprintItem> footprintItemList=footprintService.listFootprintByUserId(userId);
-        PageInfo<FootprintItem> footprintItemPageInfo=new PageInfo<>(footprintItemList);
-        List<FootprintItem> pageList=footprintItemPageInfo.getList();
+    public Object listFootprintByUserId(HttpServletRequest request,
+                                        @RequestParam(defaultValue = "1") Integer page,
+                                        @RequestParam(defaultValue = "10") Integer limit) {
+        Object retObj;
+        String s=request.getHeader("id");
 
-        footprintItemLists=new ArrayList<>();
-        for(int i=0;i<pageList.size();i++) {
-            footprintItem=pageList.get(i);
-            footprintItem.setGoodsPo(goodsApi.userGetGoodsById(footprintItem.getGoodsId()));
-            footprintItemLists.add(footprintItem);
-        }
-        Object retObj=ResponseUtil.ok(footprintItemLists);
-        return retObj;
-    }
-
-    /**
-     * 删除用户足迹/delete
-     *
-     * @param id 足迹ID
-     * @return retObi，即删除成功或失败
-     */
-    @DeleteMapping("/footprints/{id}")
-    public Object deleteFootprintsById(@PathVariable(value ="id")Integer id) {
-        Object  retObj;
-        if(footprintService.deleteFootprintById(id)==1) {
-            retObj=ResponseUtil.ok();
+        if(s==null) {
+            retObj=ResponseUtil.unlogin();
         }
         else {
-            retObj=ResponseUtil.notexist();
+            Integer userId=Integer.valueOf(s);
+            if(userId<=0 || page<=0 || limit<=0)
+            {
+                retObj=ResponseUtil.badValue();
+            }
+            else {
+                PageHelper.startPage(page,limit);
+                List<FootprintItem> footprintItemList=footprintService.listFootprintByUserId(Integer.valueOf(userId));
+                PageInfo<FootprintItem> footprintItemPageInfo=new PageInfo<>(footprintItemList);
+                List<FootprintItem> pageList=footprintItemPageInfo.getList();
+
+                footprintItemLists=new ArrayList<>();
+                for(int i=0;i<pageList.size();i++) {
+                    footprintItem=pageList.get(i);
+                    footprintItem.setGoodsPo(goodsServiceApi.getGoodsByIdIn(footprintItem.getGoodsId()));
+                    footprintItemLists.add(footprintItem);
+                }
+
+                if(footprintItemLists.size()>0) {
+                    retObj=ResponseUtil.ok(footprintItemLists);
+                }
+                else {
+                    retObj=ResponseUtil.nofootprint();
+                }
+            }
         }
         return retObj;
     }
@@ -112,17 +150,28 @@ public class FootprintController {
     @PostMapping("/footprints")
     public Object addFootprint(@RequestBody FootprintItemPo footprintItemPo) {
         Object retObj;
-        int size=footprintService.findFootprintItem(footprintItemPo.getUserId(),footprintItemPo.getGoodsId()).size();
-        if(size>0) {
-            retObj=ResponseUtil.ok(footprintService.updateFootprint(footprintItemPo));
-            return retObj;
-        }//用户浏览过商品，更改上次浏览时间
-        //用户首次浏览商品，添加足迹信息
-        if((footprintMapper.addFootprint(footprintItemPo))==1){
-            retObj=ResponseUtil.ok(footprintService.addFootprint(footprintItemPo));
+        boolean legal=footprintItemPo.getGoodsId()!=null && footprintItemPo.getUserId() !=null;
+        if(legal) {
+            int size=footprintService.findFootprintItem(footprintItemPo.getUserId(),footprintItemPo.getGoodsId()).size();
+            if(size>0) {
+                if(footprintService.updateFootprint(footprintItemPo)==1) {
+                    retObj=ResponseUtil.ok(footprintService.findFootprintItem(footprintItemPo.getUserId(),footprintItemPo.getGoodsId()).get(0));
+                }
+                else {
+                    retObj=ResponseUtil.addfootprintfail();
+                }
+                return retObj;
+            }//用户浏览过商品，更改上次浏览时间
+            //用户首次浏览商品，添加足迹信息
+            if((footprintService.addFootprint(footprintItemPo))==1){
+                retObj=ResponseUtil.ok(footprintService.findFootprintItem(footprintItemPo.getUserId(),footprintItemPo.getGoodsId()).get(0));
+            }
+            else {
+                retObj=ResponseUtil.addfootprintfail();
+            }
         }
         else {
-            retObj=ResponseUtil.badArgumentValue();
+            retObj=ResponseUtil.badValue();
         }
         return retObj;
     }

@@ -70,41 +70,17 @@ public class ResponseUtil {
         return obj;
     }
 
-    public static Object badArgument() {
-        return fail(401, "参数不对");
-    }
-
-    public static Object badArgumentValue() {
-        return fail(402, "参数值不对");
-    }
-
     public static Object unlogin() {
-        return fail(501, "请登录");
+        return fail(660, "用户未登录");
     }
 
-    public static Object serious() {
-        return fail(502, "系统内部错误");
-    }
+    public static Object nofootprint() { return fail(740,"该足迹是无效足迹");}
 
-    public static Object unsupport() {
-        return fail(503, "业务不支持");
-    }
+    public static Object addfootprintfail() { return fail(741,"足迹添加失败");}
 
-    public static Object updatedDateExpired() {
-        return fail(504, "更新数据已经失效");
-    }
+    public static Object getFootprintFail() { return fail(742,"足迹查询失败");}
 
-    public static Object updatedDataFailed() {
-        return fail(505, "更新数据失败");
-    }
-
-    public static Object unauthz() {
-        return fail(506, "无操作权限");
-    }
-
-    public static Object notexist() {
-        return fail(507, "数据不存在");
-    }
+    public static Object badValue() { return fail(580,"参数不合法");}
 }
 
 

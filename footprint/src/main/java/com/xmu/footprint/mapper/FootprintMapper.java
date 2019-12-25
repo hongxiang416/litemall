@@ -13,12 +13,12 @@ import java.util.List;
  */
 public interface FootprintMapper {
     /**
-     * 根据用户名或商品名找到足迹
-     * @param userName
-     * @param goodsName
+     * 根据用户id或商品id找到足迹
+     * @param userId
+     * @param goodsId
      * @return
      */
-    public List<FootprintItem> listFootprintByCondition(@Param("userName") String userName, @Param("goodsName") String goodsName);
+    public List<FootprintItem> listFootprintByCondition(@Param("userId") Integer userId, @Param("goodsId") Integer goodsId);
 
     /**
      * 根据用户id找到用户的所有评论
@@ -27,12 +27,12 @@ public interface FootprintMapper {
      */
     public List<FootprintItem> listFootprintByUserId(Integer userId);
 
-    /**
-     * 删除足迹
-     * @param id
-     * @return
-     */
-    public int deleteFootprintById(Integer id);
+//    /**
+//     * 删除足迹
+//     * @param id
+//     * @return
+//     */
+//    public int deleteFootprintById(Integer id);
 
     /**
      * 根据用户id和商品id找到足迹
@@ -56,10 +56,10 @@ public interface FootprintMapper {
      */
     public int updateFootprint(FootprintItemPo footprintItemPo);
 
-    /**
-     * 根据id找到足迹
-     * @param id
-     * @return
-     */
-    public FootprintItemPo getFootprintItemPoById(Integer id);
+//    /**
+//     * 根据id找到足迹
+//     * @param id
+//     * @return
+//     */
+//    public FootprintItemPo getFootprintItemPoById(Integer id);
 }
